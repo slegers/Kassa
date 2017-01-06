@@ -1,0 +1,188 @@
+<?php
+
+function kassa_schema(){
+	$schema = array();
+
+	$schema['kassa_ding'] = array(
+	'description' => 'Een tabel die alle verkoopbare materialen van WIna bevat',
+	'fields' => array(
+		'ding_id' => array(
+			'type' => 'int',
+			'not null' => true,
+			),
+		'naam' => array(
+			'type' => 'varchar',
+			'not null' => true,
+			'length' => 100,
+			),
+		'prijs_leden' => array(
+			'type' => 'int',
+			'not null' => true,
+			),
+		'prijs_niet_leden' => array(
+			'type' => 'int',
+			'not null' => true,
+			),
+		'uniek' => array(
+			'type' => 'varchar',
+			'length' => 1,
+			'not null' => true,
+			),
+		
+		'verkoopbaar_tot' => array(
+			'type' => 'int',
+			'not null' => false
+		),
+		'kassa_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'zichtbaar' => array(
+			'type' => 'varchar',
+			'length' => 1,
+			'not null' => true,
+		),	
+	),
+	'primary key' => array('ding_id'),
+	); 
+	$schema['kassa_kassa'] = array(
+	'description' => 'Een tabel die alle kassa\'s bevat van Wina',
+	'fields' => array(
+		'kassa_id' => array(
+			'type' => 'serial',
+			'not null' => true,
+			),
+		'kassa' => array(
+			'type' => 'varchar',
+			'not null' => true,
+			'length' => 20,
+		),
+	),
+	'primary key' => array('kassa_id'),
+	);
+	$schema['kassa_transactie'] = array(
+	'description' => 'Een tabel die alle kassatransacties bevat',
+	'fields' => array(
+		'transactie_id' => array(
+			'type'=> 'serial',
+			'not null' => true,
+		),
+		'type' => array(
+			'type' => 'varchar',
+			'not null' => true,
+			'length' => 10,
+		),
+		'bedrag' => array(
+			'type' => 'int',
+			'not null' => true,	
+		),
+		'tijdstip' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'kassa_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'omschrijving' => array(
+			'type' => 'varchar',
+			'length' => 200,
+			'not null' => true,
+		),
+	),
+	'primary key' => array('transactie_id'),
+	);
+	$schema['kassa_transactie_verkoop'] = array(
+	'description' => 'Een tabel die alle verkopen van Wina bevat',
+	'fields' => array(
+		'persoon_id' => array(
+			'type' => 'int',
+			'not null' => false,
+			),
+		'verkoop_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),	
+		'transactie_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+	),
+	'primary key' => array('verkoop_id'),
+	);
+	$schema['kassa_verkoop_bevat'] = array(
+	'description' => 'een tabel die alle verkochte dingen bevat',
+	'fields' => array(
+		'ding_id' => array(
+			'type' => 'int',
+			'not null' => true,
+			),
+		'verkoop_id' => array(
+			'type' => 'int',
+			'not null' => true,
+			),
+/*		'kassa_id' => array(
+			'type' => 'int',
+			'not null' => true,
+			),*/
+	),
+	'primary key' => array('ding_id','verkoop_id'),
+	);
+	$schema['kassa_verkoop_uniek'] = array(
+	'description' => 'Een tabel registreert of een persoon ee bepaalt ding al gekocht heeft',
+	'fields' => array(
+		'ding_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'persoon_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+	),
+	'primary key' => array('ding_id','persoon_id'),
+	);
+	$schema['kassa_transactie_verhuur'] = array(
+	'description' => 'Een tabel die alle verhuur van Wina registreert',
+	'fields' => array(
+		'kassa_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'reservatie_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'transactie_id' => array(
+			'type' => 'int',
+			'not null' => true,
+		),
+		'afgehaald' => array(
+			'type' => 'varchar',
+			'length' => 1,
+			'not null' => false,
+		),
+		'teruggebracht' => array(
+			'type' => 'varchar',
+			'length' => 1,
+			'not null' => false,
+		),
+	  ),
+	'primary key' => array('reservatie_id'),
+	);
+	return $schema;
+}
+
+function kassa_install(){
+	db_insert('kassa_kassa')
+	->fields(array(
+	'kassa_id' => 2,
+	'kassa' => 'Groene kassa',
+	))->execute();
+
+	db_insert('kassa_kassa')
+	->fields(array(
+	'kassa_id' => 1,
+	'kassa' => 'Bankrekening',
+	))->execute();
+}

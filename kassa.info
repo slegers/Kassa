@@ -1,0 +1,8 @@
+name = Kassa
+package = Wina
+description = Een module om de gangkassa's te beheren die op de Winagang staat.
+core = 7.x
+dependencies[] = formtable
+dependencies[] = ldb
+dependencies[] = ldb_app
+dependencies[] = materiaal

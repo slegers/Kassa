@@ -1,0 +1,214 @@
+<?php
+/**
+*	A module that registers cash registratoins, rentable registrations
+*
+*	@author Yanice Slegers 2015 - 2016 yanice@wina.be
+*	@version 2.0
+*/
+function kassa_menu(){
+		$items['admin/kassa'] = array(
+		'page callback' => 'drupal_get_form',
+		'page arguments'=> array('kassa_form'),
+		'title' => t('Cash register'),
+		'access callback' => 'kassa_access',
+		'access arguments' => array('winagang'), 
+		'file'=> 'pages/kassa.inc',
+		);
+		$items['admin/kassa/overview'] = array(
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'title' => t('Cash desk'),
+		'weight' => -1,
+		);
+	if(module_exists('materiaal')){
+		$items['admin/kassa/materiaal'] = array(
+		'type' => MENU_LOCAL_TASK,
+		'title' => t('Material'),
+		'weight' => 0,
+		'access callback' => true,
+		'access arguments' => array('winagang'),
+		'page arguments'=> array('kassa_materiaal_form'),
+		'file' => 'pages/kassa.materiaal.inc',
+		);
+	}
+		$items['admin/kassa/add_registration'] = array(
+		'page callback'=> 'drupal_get_form',
+		'page arguments'=> array('kassa_verkoop_form'),
+		'title'=> t('Sell'),
+		'access arguments'=> array('winagang'),
+		'file'=> 'pages/kassa.verkoop.inc',
+		'type'=> MENU_LOCAL_ACTION,
+		);
+		$items['admin/kassa/edit'] = array(
+		'title' => t('Edit cash desk'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('kassa_edit_form'),
+		'access arguments' => array('beheer'),
+		'file' => 'pages/kassa.edit.inc',
+		'type' => MENU_LOCAL_ACTION,
+		);
+		$items['admin/kassa/add_registration/%kassa_verkoop'] = array(
+		'title' => t('Verkoop'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('kassa_verkoop_form',3),
+		'access arguments' => array('beheer'),
+		'file' => 'pages/kassa.verkoop.inc', 
+		);
+		$items['admin/kassa/count'] = array(
+		'title' => t('Count cash desk'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('kassa_count_form'),
+		'access arguments' => array('winagang'),
+		'file' => 'pages/kassa.count.inc',
+		'type' => MENU_LOCAL_ACTION,
+		);	
+		$items['admin/kassa/ding'] = array(
+		'title'=> t('Add ding'),
+		'page callback'=> 'drupal_get_form',
+		'page arguments'=> array('kassa_ding_form'),
+		'access arguments'=> array('winagang'),
+		'file'=> 'pages/kassa.ding.inc',
+		'type'=> MENU_LOCAL_ACTION,
+		);
+		$items['admin/kassa/ding/%kassa_ding'] = array(
+		'title' => t('Edit ding'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('kassa_ding_form',3),
+		'access arguments' => array('beheer'),
+		'file' => 'pages/kassa.ding.inc',
+		);
+		$items['admin/config/content/kassa'] = array(
+		'title' => t('kassa\'s'),
+		'descripton' => t('Add cash desks'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('kassa_settings_form'),
+		'access arguments' => array('beheer'),
+		'file' => 'pages/kassa.settings.inc',
+		);
+		return $items;
+}//END hook_menu
+function kassa_verkoop_load($verkoop_id){	
+	$q = db_select('kassa_transactie_verkoop')
+	->fields('kassa_transactie_verkoop')
+	->condition('verkoop_id',$verkoop_id)
+	->execute()
+	->fetchObject();
+	if(!$q){
+		return false;
+	}else{	
+		return $q;
+	}
+	
+}
+function kassa_ding_load($ding_id){
+	$d = db_select('kassa_ding')
+	->fields('kassa_ding')
+	->condition('ding_id',$ding_id)
+	->execute()
+	->fetchObject();
+	if(!$d){
+		return false;
+	}else{
+		return $d;
+	}
+}
+
+function kassa_access(){
+	global $user;
+	return user_access('winagang');
+}
+function kassa_permission(){
+	return array(
+	'winagang' => array(
+		'title' => t('Add registrations'),
+		'description' => t('Only for persons who are living on the winagang'),
+		),	
+	'beheer' => array(
+		'title' => t('close cash desks'),
+		'description' => t('Only for the CFO\'s of wina'), 
+		),
+	'webteam' => array(
+		'title' => t('Do dangerous things with cash desks'),
+		),
+	);
+}
+function kassa_price_to_euro($prijs){
+	if($prijs >=0){ 
+	       if($prijs == null or $prijs == 0){
+        	        return '  € 0';
+	        }elseif(strlen($prijs)==2){
+	        	return '  € ' . '0,'.$prijs;
+       		}elseif(strlen($prijs)==1){
+			return '  € ' . '0,0'.$prijs;
+		}
+        	$d = substr($prijs,0,-2);
+        	$k = substr($prijs,-2);
+	        return ' € ' . $d .',' . $k;
+	}else{
+		if(strlen($prijs) == 2){
+			return '- € 0,0' . substr($prijs,1);
+		}elseif(strlen($prijs) == 3){
+			return '- € 0,' . substr($prijs,1);
+		}
+		$d = substr($prijs,1,-2);
+		$k = substr($prijs,-2);
+		return '- € ' . $d .',' . $k;
+	}
+}
+function kassa_get_max($tablename,$kolumname){
+	$q = db_select($tablename);
+	$q->addExpression('Max('.$kolumname.')');
+	return $q->execute()->fetchField();
+}
+function kassa_get_ding(){
+	
+	$q = db_select('kassa_ding');
+	//$q->condition(db_or()->condition('verkoopbaar_tot',time(),'>')->condition('verkoopbaar_tot',null))
+	$q->fields('kassa_ding');
+	return $q->execute()->fetchAll();
+}
+function kassa_get_kassa(){
+	$q = db_select('kassa_kassa');
+	$q->fields('kassa_kassa');
+	return $q->execute()->fetchAll();
+}
+function kassa_is_lid($persoon_id){
+	if(!isset($persoon_id)){
+		return false;
+	}
+	$q = ldb_select('persoon_lidmaatschap');
+	$q->condition('persoon_id',$persoon_id)
+	->condition('jaar',ldb_get_jaar('boekjaar'))
+	->fields('persoon_lidmaatschap');
+	if(count($q->execute()->fetchAll())>=1){
+		return true; 
+	}
+	return false;
+}
+function kassa_get_verkocht_ding($verkoop_id,$ding_id){
+	$q = db_select('kassa_verkoop_bevat');
+	$q->condition('verkoop_id',$verkoop_id)
+	->condition('ding_id',$ding_id)
+	->fields('kassa_verkoop_bevat');
+	return $q->execute()->fetch();
+}
+function kassa_get_verkoop($transactie_id){
+	$q = db_select('kassa_transactie_verkoop');
+	$q->condition('transactie_id',$transactie_id)
+	->fields('kassa_transactie_verkoop');
+	return $q->execute()->fetch();
+}
+function kassa_kassa_load($kassa_id){
+	$q = db_select('kassa_kassa');
+	$q->condition('kassa_id',$kassa_id)
+	->fields('kassa_kassa');
+	return $q->execute()->fetch();
+}
+function kassa_get_kringen(){
+	return array(
+	'B' => 'Bios',
+	'C' => 'Chemika',
+	'G' => 'Geos',
+	'M' => 'Merkator',
+	'W' => 'Wina',
+	);
+}
